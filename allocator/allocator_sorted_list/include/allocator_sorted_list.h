@@ -17,11 +17,24 @@ private:
     
     void *_trusted_memory;
 
-    static constexpr const size_t allocator_metadata_size = sizeof(std::pmr::memory_resource *) + sizeof(fit_mode) + sizeof(size_t) + sizeof(std::mutex) + sizeof(void*);
+    static constexpr const size_t allocator_metadata_size = sizeof(std::pmr::memory_resource *) + sizeof(fit_mode) + 
+        sizeof(size_t) + sizeof(std::mutex) + sizeof(void*);
 
     static constexpr const size_t block_metadata_size = sizeof(void*) + sizeof(size_t);
 
+    std::mutex& get_mutex() const noexcept;
+    std::pmr::memory_resource* get_parent() const noexcept;
+    size_t get_space_size() const noexcept;
+    fit_mode get_fit_mode() const noexcept;
+
+    void* get_first_free() const noexcept;
+    void set_first_free(void* ptr) noexcept;
+
+    static void* get_blocks_start(const allocator_sorted_list* alloc);
+
 public:
+
+    void swap(allocator_sorted_list& other) noexcept;
 
     explicit allocator_sorted_list(
             size_t space_size,
