@@ -1545,6 +1545,9 @@ void B_tree<tkey, tvalue, compare, t>::merge_children(btree_node* parent, size_t
     for (auto ptr : right->_pointers)
         left->_pointers.push_back(ptr);
 
+    right->_keys.clear();
+    right->_pointers.clear();
+
     parent->_keys.erase(parent->_keys.begin() + left_child_index);
     parent->_pointers.erase(parent->_pointers.begin() + (left_child_index + 1));
     
@@ -1721,12 +1724,12 @@ B_tree<tkey, tvalue, compare, t>::get_max_key(btree_node* node)
 }
 
 template<typename tkey, typename tvalue, comparator<tkey> compare, std::size_t t>
-void B_tree<tkey, tvalue, compare, t>::borrow_from_left(btree_node* parent, size_t child_index)
+void B_tree<tkey, tvalue, compare, t>::borrow_from_left(btree_node* parent, size_t child_position)
 {
-    btree_node* child = parent->_pointers[child_index];
-    btree_node* left = parent->_pointers[child_index - 1];
+    btree_node* child = parent->_pointers[child_position];
+    btree_node* left = parent->_pointers[child_position - 1];
 
-    child->_keys.insert(child->_keys.begin(), std::move(parent->_keys[child_index - 1]));
+    child->_keys.insert(child->_keys.begin(), std::move(parent->_keys[child_position - 1]));
 
     if (!left->_pointers.empty())
     {
@@ -1734,17 +1737,17 @@ void B_tree<tkey, tvalue, compare, t>::borrow_from_left(btree_node* parent, size
         left->_pointers.pop_back();
     }
 
-    parent->_keys[child_index - 1] = std::move(left->_keys.back());
+    parent->_keys[child_position - 1] = std::move(left->_keys.back());
     left->_keys.pop_back();
 }
 
 template<typename tkey, typename tvalue, comparator<tkey> compare, std::size_t t>
-void B_tree<tkey, tvalue, compare, t>::borrow_from_right(btree_node* parent, size_t child_index)
+void B_tree<tkey, tvalue, compare, t>::borrow_from_right(btree_node* parent, size_t child_position)
 {
-    btree_node* child = parent->_pointers[child_index];
-    btree_node* right = parent->_pointers[child_index + 1];
+    btree_node* child = parent->_pointers[child_position];
+    btree_node* right = parent->_pointers[child_position + 1];
 
-    child->_keys.push_back(std::move(parent->_keys[child_index]));
+    child->_keys.push_back(std::move(parent->_keys[child_position]));
 
     if (!right->_pointers.empty())
     {
@@ -1752,7 +1755,7 @@ void B_tree<tkey, tvalue, compare, t>::borrow_from_right(btree_node* parent, siz
         right->_pointers.erase(right->_pointers.begin());
     }
 
-    parent->_keys[child_index] = std::move(right->_keys.front());
+    parent->_keys[child_position] = std::move(right->_keys.front());
     right->_keys.erase(right->_keys.begin());
 }
 
@@ -1801,16 +1804,16 @@ bool B_tree<tkey, tvalue, compare, t>::try_erase_from_node(btree_node* node, con
 
         if (node->_pointers[idx]->_keys.size() >= t)
         {
-            tree_data_type left = get_max_key(node->_pointers[idx]);
-            node->_keys[idx] = left;
-            return try_erase_from_node(node->_pointers[idx], left.first);
+            tree_data_type pred = get_max_key(node->_pointers[idx]);
+            node->_keys[idx] = pred;
+            return try_erase_from_node(node->_pointers[idx], pred.first);
         }
 
         if (node->_pointers[idx + 1]->_keys.size() >= t)
         {
-            tree_data_type right = get_min_key(node->_pointers[idx + 1]);
-            node->_keys[idx] = right;
-            return try_erase_from_node(node->_pointers[idx + 1], right.first);
+            tree_data_type succ = get_min_key(node->_pointers[idx + 1]);
+            node->_keys[idx] = succ;
+            return try_erase_from_node(node->_pointers[idx + 1], succ.first);
         }
 
         merge_children(node, idx);
